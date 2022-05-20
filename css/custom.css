@@ -38,3 +38,8 @@ body .page_title {
     justify-content: center;
     margin-right: 0px;
 }
+
+.total-count {
+    position: absolute;
+    right: 20px;
+}

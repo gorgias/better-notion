@@ -183,6 +183,7 @@ async function injectScript(appendDiv = true) {
                         ${notionEmoji}
                     </div>
                     ${item}
+                    <div class="total-count"> 0 </div>
                 </div>
                 <div style="display:none;" 
                 data-page-type = "${encodePageID}"
@@ -202,6 +203,8 @@ async function injectScript(appendDiv = true) {
                 getNextPageData();
             }
         });
+        // Update record count()
+        recordCount();
     } catch (error) {
         consoleMe({ 'error': error, 'str': 'Page Not found...!!' });
     }
@@ -301,6 +304,7 @@ async function getNextPageData() {
                                     ${notionEmoji}
                                 </div>
                                 ${item}
+                                <div class="total-count"> 0 </div>      
                         </div>
                         <div style="display:none;"  data-page-type = "${encodePageID}"
                             class="custom-tag-added-${encodePageID}"> 
@@ -308,6 +312,7 @@ async function getNextPageData() {
                         </div>`);
         }
     });
+    recordCount();
 }
 
 /**
@@ -350,5 +355,15 @@ function getNotionNotificationTypes() {
         });
         // return notification types list
         resolve(notificationsTypes);
+    });
+}
+/**
+ * Set number of count record
+ */
+function recordCount() {
+    $('div[data-page-type]').each(function () {
+        let pageId = $(this).attr('data-page-type');
+        let length = $(this).find('.notion-notifications-record').length;
+        $('.custom-tag-added[data-id="' + pageId + '"] .total-count').html(length);
     });
 }
