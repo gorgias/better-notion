@@ -25,3 +25,16 @@ body .page_title {
     width: 18px;
     margin: 0px 6px 0px 0px;
 }
+
+.collapse-arrow {
+    flex-shrink: 0;
+    flex-grow: 0;
+    border-radius: 3px;
+    color: rgba(55, 53, 47, 0.65);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0px;
+}

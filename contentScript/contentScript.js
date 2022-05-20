@@ -16,12 +16,30 @@ $(document).ready(function () {
     // Handle page click event 
     $('body').on('click', '.custom-tag-added', function (event) {
         let pageId = $(this).attr('data-id') ?? '';
+        let svgColor = $('body').hasClass('dark') ? 'rgba(255, 255, 255, 0.443)' : 'rgba(55, 53, 47, 0.45)';
         if (pageId) {
             let pageDataDiv = $('[data-page-type="' + pageId + '"]');
             if (!pageDataDiv.is(':visible')) {
                 pageDataDiv.css("display", "block");
+                $(this).find('.custom-svg').html(`
+                    <svg
+                    viewBox="0 0 100 100"
+                    class="triangle"
+                    style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(180deg); opacity: 1;"
+                >
+                    <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
+                </svg>
+                `);
             } else {
                 pageDataDiv.css("display", "none");
+                $(this).find('.custom-svg').html(`<svg
+                    viewBox="0 0 100 100"
+                    class="triangle"
+                    style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(90deg); opacity: 1;"
+                >
+                    <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
+                </svg>
+                `);
             }
         }
     });
@@ -143,8 +161,24 @@ async function injectScript(appendDiv = true) {
             let encodePageID = window.btoa(unescape(encodeURIComponent(item)));
             encodePageID = encodePageID.replace(new RegExp('=', 'g'), '');
             let addClass = $('body').hasClass('dark') ? 'dark-color' : '';
+            let svgColor = $('body').hasClass('dark') ? 'rgba(255, 255, 255, 0.443)' : 'rgba(55, 53, 47, 0.45)';
             notificationsHtml += `<div class="custom-tag-added page_title ${addClass}"
-                data-id="${encodePageID}">                    
+                data-id="${encodePageID}">
+                    <div class="collapse-arrow">
+                        <div
+                            class="notion-focusable custom-svg"
+                            role="button"
+                            style="user-select: none; transition: background 20ms ease-in 0s; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 3px;"
+                        >
+                            <svg
+                                viewBox="0 0 100 100"
+                                class="triangle"
+                                style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(90deg); opacity: 1;"
+                            >
+                                <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
+                            </svg>
+                        </div>
+                    </div>
                     <div class="custom-notion-emoji">
                         ${notionEmoji}
                     </div>
@@ -245,12 +279,28 @@ async function getNextPageData() {
         } else {
             let clone = $('#note_id');
             let addClass = $('body').hasClass('dark') ? 'dark-color' : '';
+            let svgColor = $('body').hasClass('dark') ? 'rgba(255, 255, 255, 0.443)' : 'rgba(55, 53, 47, 0.45)';
             clone.append(`<div class="custom-tag-added page_title ${addClass}"
                                 data-id="${encodePageID}">
+                                <div class="collapse-arrow">
+                                    <div
+                                        class="notion-focusable custom-svg"
+                                        role="button"
+                                        style="user-select: none; transition: background 20ms ease-in 0s; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 3px;"
+                                    >
+                                        <svg
+                                            viewBox="0 0 100 100"
+                                            class="triangle"
+                                            style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(90deg); opacity: 1;"
+                                        >
+                                            <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
+                                        </svg>
+                                    </div>
+                                </div>
                                 <div class="custom-notion-emoji">
                                     ${notionEmoji}
                                 </div>
-                                ${item}    
+                                ${item}
                         </div>
                         <div style="display:none;"  data-page-type = "${encodePageID}"
                             class="custom-tag-added-${encodePageID}"> 
