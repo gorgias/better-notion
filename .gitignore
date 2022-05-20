@@ -1,0 +1,7 @@
+.DS_Store
+.idea/
+.vscode/
+*.old
+*.log
+.DS_Store
+config.json.js

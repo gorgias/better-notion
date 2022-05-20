@@ -1,0 +1,13 @@
+body .page_title {
+    display: flex;
+    align-items: center;
+    min-height: 27px;
+    font-size: 14px;
+    padding: 2px 14px;
+    width: 100%;
+    font-weight: 600;
+    background: rgba(55, 53, 47, 0.08);
+    color: rgb(55, 53, 47);
+    margin: 0px 5px 5px 0px;
+    cursor: pointer;
+}
