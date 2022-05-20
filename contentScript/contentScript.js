@@ -55,14 +55,6 @@ new MutationObserver(function (mutations) {
 
             return false;
         }
-
-        if (focusElement.length <= 2) {
-            noteIdElement.style.height = '0px';
-            scrollElement.style.removeProperty('height');
-        } else {
-            scrollElement.style.height = '0px';
-            noteIdElement.style.removeProperty('height');
-        }
     }
 
 }).observe(body, config);
