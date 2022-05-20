@@ -1,20 +1,8 @@
-$(document).ready(function () {
-    // Handle page click event 
-    $('body').on('click', '.custom-tag-added', function (event) {
-        let pageId = $(this).attr('data-id') ?? '';
-        if (pageId) {
-            let pageDataDiv = $('.custom-tag-added-' + pageId);
-            if (!pageDataDiv.is(':visible')) {
-                pageDataDiv.css("display", "block");
-            } else {
-                pageDataDiv.css("display", "none");
-            }
-        }
-    });
-})
-/**
- * Handle MutationObserver 
- */
+// Const define 
+const NOTION_DIV_SCROLL = '.notion-updates-menu .notion-scroller.vertical';
+const NOTION_NOTIFICATION_DIV = 'a .notranslate:not(.notion-record-icon)';
+const NOTION_MAIN_DIV = '.notion-updates-menu';
+
 const body = document.querySelector("body");
 const config = {
     attributes: false,
@@ -22,113 +10,303 @@ const config = {
     childList: true,
     subtree: true,
 };
-let callOneTime = true;
+
+// Document ready
+$(document).ready(function () {
+    // Handle page click event 
+    $('body').on('click', '.custom-tag-added', function (event) {
+        let pageId = $(this).attr('data-id') ?? '';
+        if (pageId) {
+            let pageDataDiv = $('[data-page-type="' + pageId + '"]');
+            if (!pageDataDiv.is(':visible')) {
+                pageDataDiv.css("display", "block");
+            } else {
+                pageDataDiv.css("display", "none");
+            }
+        }
+    });
+
+    // Handle notion notification div scroll event
+    $('body').on('click', '.hide-scrollbar .notion-focusable', function () {
+        let appendDiv = false;
+        if (document.querySelector(NOTION_MAIN_DIV)
+            && !document.querySelector('#note_id')) {
+            appendDiv = true;
+        }
+        injectScript(appendDiv);
+    });
+});
+
+/**
+ * Handle MutationObserver 
+ */
 new MutationObserver(function (mutations) {
-    if (document.querySelector('.notion-updates-menu')) {
-        setTimeout(function () {
-            injectScript();
-        }, 5000);
+    if (document.querySelector(NOTION_MAIN_DIV)
+        && !document.querySelector('#note_id')) {
+        injectScript();
+    }
+    // Handling menu tab event
+    if (document.querySelector(NOTION_MAIN_DIV)) {
+        let focusElement = $('.hide-scrollbar .notion-updates-button-all-updates').parent().parent().find('div');
+        let noteIdElement = document.querySelector('#note_id')
+        let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
+
+        if (!noteIdElement || !scrollElement) {
+
+            return false;
+        }
+
+        if (focusElement.length <= 2) {
+            noteIdElement.style.height = '0px';
+            scrollElement.style.removeProperty('height');
+        } else {
+            scrollElement.style.height = '0px';
+            noteIdElement.style.removeProperty('height');
+        }
     }
 
 }).observe(body, config);
+
 /**
  * Inject custom div before scrape data
+ * 
+ * @param {boolean} appendDiv if passed true then insert new div, otherwise not insert
+ * 
+ * @returns 
  */
-function injectScript() {
+async function injectScript(appendDiv = true) {
+    try {
+        // Check if element exists or not
+        let elementExists = await checkNotionElementExistsOrNot();
+        if (!elementExists) {
 
-    var targetElementMain = document.querySelector('.notion-updates-menu')
-    var scrollElement = document.querySelector('.notion-updates-menu .notion-scroller.vertical');
+            return false;
+        }
 
-    // Create a clone of element with id ddl_1:
-    let clone = scrollElement.cloneNode(true);
+        // When custom div already exists then wait 300 milliseconds
+        if (!appendDiv) {
+            await waitFor(300);
+        }
 
-    // Change the id attribute of the newly created element:
-    clone.setAttribute('id', 'note_id');
-    clone.innerHTML = '<div>Call New IDS</div>';
+        // Create custom clone element.
+        let targetElementMain = document.querySelector(NOTION_MAIN_DIV);
+        let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
+        let clone = document.querySelector('#note_id');
 
-    // Append the newly created element on element p 
-    targetElementMain.insertBefore(clone, null);
-    scrollElement.style.height = '0px';
-    var targetElement = document.querySelector('.notion-updates-menu .notion-scroller.vertical').childNodes[0].childNodes[0].childNodes[0];
-    var text = [];
-    Array.from(targetElement.childNodes).map(function (element) {
-        var type = element.querySelector('a .notranslate:not(.notion-record-icon)').innerText.replace(/^\s+|\s+$/gm, '');
-        text.push(type)
-    });
+        if (appendDiv && clone === null) {
+            // Create a clone of element with id note_id.
+            clone = scrollElement.cloneNode(true);
+            // Change the id attribute of the newly created element.
+            clone.setAttribute('id', 'note_id');
+            clone.setAttribute('class', 'notion_extension');
+            //clone.innerHTML = getNotionLoadingHTML();
+            targetElementMain.insertBefore(clone, null);
+            scrollElement.style.height = '0px';
+            clone.style.removeProperty('height');
+        }
+        clone.innerHTML = getNotionLoadingHTML();
 
-    text = text.filter(function (value, index, self) {
-        return self.indexOf(value) === index;
-    });
-
-    let array = '';
-
-    text.map(function (val) {
-
-        var arrayElement = '';
-        Array.from(targetElement.childNodes).map(function (element) {
-            var type = element.querySelector('a .notranslate:not(.notion-record-icon)').innerText.replace(/^\s+|\s+$/gm, '');
-            if (val == type) {
-                arrayElement += element.innerHTML;
-            }
-        }).filter(function (item) { return item != undefined });
-        let encodePageID = btoa(val);
-        encodePageID = encodePageID.replace(new RegExp('=', 'g'), '');
-
-        array += `<div class="custom-tag-added page_title"
-            data-id="${encodePageID}">${val}</div>
-            <div style="display:none;" class="custom-tag-added-${encodePageID}"> ${arrayElement} </div>`;
-    });
-    clone.innerHTML = array
-
-    $(clone).on('scroll', function () {
-        console.log('call...Scroll')
-        var scrollElement = document.querySelector('.notion-updates-menu .notion-scroller.vertical');
-
-        if ($(this).scrollTop() + $(this).innerHeight() + 2 >= $(this)[0].scrollHeight) {
+        // Get next number of page record
+        for (var i = 0; i < INITIAL_PAGES_TO_LOAD; i++) {
+            await waitFor(1000);
             $(scrollElement).scrollTop($(scrollElement)[0].scrollHeight);
+        }
 
-            setTimeout(function () {
-                getScrollData();
-            }, 5000);
+        // Waiting process for get data
+        await waitFor(1000);
+
+        // Get child node element
+        let targetElement = document.querySelector(NOTION_DIV_SCROLL).childNodes[0].childNodes[0].childNodes[0];
+
+        let notificationsTypes = await getNotionNotificationTypes();
+        if (targetElement.length === 0 || (targetElement.childNodes.length == 1
+            && targetElement.childNodes[0].tagName == 'svg'
+        )) {
+            clone.innerHTML = document.querySelector(NOTION_DIV_SCROLL).innerHTML;
+            return false;
+        }
+
+        targetElement = document.querySelector(NOTION_DIV_SCROLL).querySelector('.notranslate').childNodes;
+        if (targetElement.length && targetElement[0].childNodes[0].attributes.length === 0) {
+            targetElement = targetElement[0].childNodes;
+        }
+        // Set notion notification HTML into new clone element.
+        let notificationsHtml = '';
+        notificationsTypes.map(function (item) {
+            let elementInnerHtml = '';
+            let notionEmoji = '';
+            Array.from(targetElement).map(function (element, index) {
+                // Check notification div
+                if (element.querySelector(NOTION_NOTIFICATION_DIV)) {
+                    let notificationType = element.querySelector(NOTION_NOTIFICATION_DIV).innerText.replace(/^\s+|\s+$/gm, '');
+                    if (item == notificationType) {
+                        elementInnerHtml += '<div class="notion-notifications-record" data-index="' + index + '">' + element.innerHTML + '</div>';
+                        if (element.querySelector('.notion-record-icon img')) {
+                            notionEmoji = element.querySelector('.notion-record-icon img').parentNode.innerHTML;
+                        }
+                    }
+                }
+            }).filter(function (item) { return item != undefined });
+
+            let encodePageID = window.btoa(unescape(encodeURIComponent(item)));
+            encodePageID = encodePageID.replace(new RegExp('=', 'g'), '');
+            let addClass = $('body').hasClass('dark') ? 'dark-color' : '';
+            notificationsHtml += `<div class="custom-tag-added page_title ${addClass}"
+                data-id="${encodePageID}">                    
+                    <div class="custom-notion-emoji">
+                        ${notionEmoji}
+                    </div>
+                    ${item}
+                </div>
+                <div style="display:none;" 
+                data-page-type = "${encodePageID}"
+                class="custom-tag-added-${encodePageID}"> ${elementInnerHtml} </div>`;
+        });
+        clone.innerHTML = notificationsHtml;
+
+        // Handle the notion scroll data event.
+        $(clone).on('scroll', function () {
+            consoleMe({ 'str': 'Call notion data scroll...!!' });
+            let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
+            // Check the clone element height
+            consoleMe({ 'str': 'Page was scroll..!!' });
+            if ($(this).scrollTop() + $(this).innerHeight() + 2 >= $(this)[0].scrollHeight) {
+                $(scrollElement).scrollTop($(scrollElement)[0].scrollHeight);
+                // Get the next page data
+                getNextPageData();
+            }
+        });
+    } catch (error) {
+        consoleMe({ 'error': error, 'str': 'Page Not found...!!' });
+    }
+}
+
+/**
+ * Check if {NOTION_MAIN_DIV, NOTION_DIV_SCROLL, NOTION_NOTIFICATION_DIV} element exists or not
+ * 
+ * @returns 
+ */
+function checkNotionElementExistsOrNot() {
+    return new Promise(resolve => {
+        try {
+            let targetElementMain = document.querySelector(NOTION_MAIN_DIV);
+            let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
+            if (scrollElement && targetElementMain) {
+
+                resolve(true);
+            };
+
+            resolve(false);
+        } catch (error) {
+
+            consoleMe({ 'error': error, 'str': 'Page Not found...!!' });
+
+            resolve(false);
         }
     });
 }
+
 /**
- * Get Pages data when user scroll to all record
+ * Get notion notification data, when user scroll to top to bottom
  */
-function getScrollData() {
-    // Create a clone of element with id ddl_1:
-    var targetElement = document.querySelector('.notion-updates-menu .notion-scroller.vertical').childNodes[0].childNodes[0].childNodes[0];
-    var text = [];
-    Array.from(targetElement.childNodes).map(function (element) {
-        var type = element.querySelector('a .notranslate:not(.notion-record-icon)').innerText.replace(/^\s+|\s+$/gm, '');
-        text.push(type)
-    });
+async function getNextPageData() {
+    // Waiting process for get data
+    await waitFor(1000);
 
-    text = text.filter(function (value, index, self) {
-        return self.indexOf(value) === index;
-    });
+    if (!document.querySelector(NOTION_DIV_SCROLL)) {
 
-    text.map(function (val) {
-
-        var arrayElement = '';
-        Array.from(targetElement.childNodes).map(function (element) {
-            var type = element.querySelector('a .notranslate:not(.notion-record-icon)').innerText.replace(/^\s+|\s+$/gm, '');
-            if (val == type) {
-                arrayElement += element.innerHTML;
-            }
-        }).filter(function (item) { return item != undefined });
-        let encodePageID = btoa(val);
+        return false;
+    }
+    // Find notification element
+    let targetElement = document.querySelector(NOTION_DIV_SCROLL).querySelector('.notranslate').childNodes;
+    if (targetElement.length && targetElement[0].childNodes[0].attributes.length === 0) {
+        targetElement = targetElement[0].childNodes;
+    }
+    // Set notion notification HTML into new clone element.
+    let notificationsTypes = await getNotionNotificationTypes();
+    notificationsTypes.map(function (item) {
+        let encodePageID = window.btoa(unescape(encodeURIComponent(item)));
         encodePageID = encodePageID.replace(new RegExp('=', 'g'), '');
         let existElement = $('[data-id="' + encodePageID + '"]') ?? '';
 
+        let notificationsHtml = '';
+        let notionEmoji = '';
+
+        Array.from(targetElement).map(function (element, index) {
+            if (element.querySelector(NOTION_NOTIFICATION_DIV)) {
+                let notificationsType = element.querySelector(NOTION_NOTIFICATION_DIV).innerText.replace(/^\s+|\s+$/gm, '');
+                if (item == notificationsType) {
+                    if ($('div[data-page-type="' + encodePageID + '"]').find('[data-index="' + index + '"]').length === 0) {
+                        notificationsHtml += '<div class="notion-notifications-record" data-index="' + index + '">' + element.innerHTML + '</div>';
+                    }
+                    if (element.querySelector('.notion-record-icon img')) {
+                        notionEmoji = element.querySelector('.notion-record-icon img').parentNode.innerHTML;
+                    }
+                }
+            }
+        }).filter(function (item) { return item != undefined });
+
+        // Check if notification group element already exist or not.
         if (existElement.length > 0) {
-            $('custom-tag-added-' + encodePageID).append(arrayElement)
+            $('[data-page-type="' + encodePageID + '"]').append(notificationsHtml)
+            $('[data-id="' + encodePageID + '"]').find('.custom-notion-emoji').html(notionEmoji)
         } else {
             let clone = $('#note_id');
-            clone.append(`<div class="custom-tag-added page_title"
-            data-id="${encodePageID}">${val}</div>
-            <div style="display:none;" class="custom-tag-added-${encodePageID}"> ${arrayElement} </div>`);
+            let addClass = $('body').hasClass('dark') ? 'dark-color' : '';
+            clone.append(`<div class="custom-tag-added page_title ${addClass}"
+                                data-id="${encodePageID}">
+                                <div class="custom-notion-emoji">
+                                    ${notionEmoji}
+                                </div>
+                                ${item}    
+                        </div>
+                        <div style="display:none;"  data-page-type = "${encodePageID}"
+                            class="custom-tag-added-${encodePageID}"> 
+                            ${notificationsHtml}
+                        </div>`);
         }
+    });
+}
+
+/**
+ * Hold one second for get data process
+ * 
+ * @param {number} seconds for passed number
+ * 
+ * @returns {boolean} true
+ */
+function waitFor(seconds) {
+    return new Promise(resolve => {
+        setTimeout(function () {
+
+            resolve(true);
+        }, seconds);
+    });
+}
+
+/**
+ * Get Notion notification Types
+ */
+function getNotionNotificationTypes() {
+    return new Promise(resolve => {
+        let targetElement = document.querySelector(NOTION_DIV_SCROLL).querySelector('.notranslate').childNodes;
+        let notificationsTypes = [];
+        if (targetElement.length && targetElement[0].childNodes[0].attributes.length === 0) {
+            targetElement = targetElement[0].childNodes;
+        }
+        // Get notification types
+        Array.from(targetElement).map(function (element) {
+            if (element.querySelector(NOTION_NOTIFICATION_DIV)) {
+                let type = element.querySelector(NOTION_NOTIFICATION_DIV).innerText.replace(/^\s+|\s+$/gm, '');
+                notificationsTypes.push(type)
+            }
+        });
+        // get uniq notification types
+        notificationsTypes = notificationsTypes.filter(function (value, index, self) {
+
+            return self.indexOf(value) === index;
+        });
+        // return notification types list
+        resolve(notificationsTypes);
     });
 }

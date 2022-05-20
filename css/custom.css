@@ -11,3 +11,17 @@ body .page_title {
     margin: 0px 5px 5px 0px;
     cursor: pointer;
 }
+
+.dark-color {
+    background: rgba(255, 255, 255, 0.055) !important;
+    color: rgba(255, 255, 255, 0.87) !important;
+}
+
+.custom-notion-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    width: 18px;
+    margin: 0px 6px 0px 0px;
+}

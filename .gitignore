@@ -4,4 +4,3 @@
 *.old
 *.log
 .DS_Store
-config.json.js

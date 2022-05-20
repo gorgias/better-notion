@@ -1,7 +1,7 @@
 {
-  "name": "Notion",
+  "name": "Notion Notification Manager",
   "version": "0.0.1",
-  "description": "The Notion Extension helps.",
+  "description": "Notion notification manager extension helps you to group notions notification.",
   "manifest_version": 3,
   "icons": {
     "16": "icons/notion_16x16.png",
@@ -17,12 +17,8 @@
   },
   "host_permissions": [
     "https://www.notion.so/*"
-  ],  
-  "permissions": [
-    "storage",
-    "identity",
-    "scripting"
   ],
+  "permissions": [],
   "background": {
     "service_worker": "background.js"
   },
@@ -37,7 +33,8 @@
         "css/custom.css"
       ],
       "js": [
-        "constantMessage.js",
+        "config.json.js",
+        "constant.js",
         "lib/js/jquery-3.5.1.min.js",
         "contentScript/contentScript.js"
       ]
