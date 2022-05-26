@@ -154,6 +154,9 @@ async function injectScript(appendDiv = true) {
                         if (element.querySelector('.notion-record-icon img')) {
                             notionEmoji = element.querySelector('.notion-record-icon img').parentNode.innerHTML;
                         }
+                        if (element.querySelector('.notion-record-icon span[role="image"]')) {
+                            notionEmoji = element.querySelector('.notion-record-icon span[role="image"]').innerText;
+                        }
                     }
                 }
             }).filter(function (item) { return item != undefined });
@@ -182,7 +185,7 @@ async function injectScript(appendDiv = true) {
                     <div class="custom-notion-emoji">
                         ${notionEmoji}
                     </div>
-                    ${item}
+                    <span class="text-title">${item}</span>
                     <div class="total-count"> 0 </div>
                 </div>
                 <div style="display:none;" 
@@ -192,11 +195,10 @@ async function injectScript(appendDiv = true) {
         clone.innerHTML = notificationsHtml;
 
         // Handle the notion scroll data event.
-        $(clone).on('scroll', function () {
-            consoleMe({ 'str': 'Call notion data scroll...!!' });
+        $(clone).scroll(function () {
             let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
             // Check the clone element height
-            consoleMe({ 'str': 'Page was scroll..!!' });
+            consoleMe({ 'str': 'Call notion data scroll...!!' });
             if ($(this).scrollTop() + $(this).innerHeight() + 2 >= $(this)[0].scrollHeight) {
                 $(scrollElement).scrollTop($(scrollElement)[0].scrollHeight);
                 // Get the next page data
@@ -271,6 +273,9 @@ async function getNextPageData() {
                     if (element.querySelector('.notion-record-icon img')) {
                         notionEmoji = element.querySelector('.notion-record-icon img').parentNode.innerHTML;
                     }
+                    if (element.querySelector('.notion-record-icon span[role="image"]')) {
+                        notionEmoji = element.querySelector('.notion-record-icon span[role="image"]').innerText;
+                    }
                 }
             }
         }).filter(function (item) { return item != undefined });
@@ -303,7 +308,7 @@ async function getNextPageData() {
                                 <div class="custom-notion-emoji">
                                     ${notionEmoji}
                                 </div>
-                                ${item}
+                                <span class="text-title">${item}</span>
                                 <div class="total-count"> 0 </div>      
                         </div>
                         <div style="display:none;"  data-page-type = "${encodePageID}"

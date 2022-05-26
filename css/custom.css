@@ -43,3 +43,7 @@ body .page_title {
     position: absolute;
     right: 20px;
 }
+
+.text-title {
+    width: 85%;
+}
