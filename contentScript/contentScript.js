@@ -53,6 +53,16 @@ $(document).ready(function () {
         }
         injectScript(appendDiv);
     });
+
+    // Handle notion notification div click event
+    $('body').on('click', '.notion-notifications-record div[role="button"]', function (event) {
+        var href = $(event.target).parents('a').attr('href');
+        if (href)
+        // Find trigger element click event
+        $(NOTION_DIV_SCROLL).find('a[href="'+href+'"] div[role="button"]').not('.notion-notifications-record div[role="button"]').click();
+
+        return false;
+    });
 });
 
 /**
