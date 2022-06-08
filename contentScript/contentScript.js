@@ -89,9 +89,14 @@ $(document).ready(function () {
     // Archive event
     $('body').on('click', '.closeSmall', function (event) {
         let indexId = $(event.target).parents('div[data-index]').attr('data-index');
-        $(NOTION_DIV_SCROLL).find('div[data-index="'+indexId+'"] .closeSmall').parent().click();
+        $(NOTION_DIV_SCROLL).find('div[data-index="'+indexId+'"] .closeSmall').parent().click();        
+        let notificationId = $(event.target).parents('div[data-index]').parent().attr('data-page-type')
+        let notificationIdCount = parseInt($('[data-id="'+notificationId+'"]').find('.total-count').text());
+        $('[data-id="'+notificationId+'"]').find('.total-count').text(notificationIdCount - 1);
         $('.notion-notifications-record[data-index="'+indexId+'"]').remove();
-        $('.hide-scrollbar .notion-focusable:first').click();
+        if ((notificationIdCount - 1) == 0) {
+            $('[data-id="'+notificationId+'"]').remove();
+        }
     });
 });
 
