@@ -63,6 +63,41 @@ $(document).ready(function () {
 
         return false;
     });
+
+    // Handle notion notification div click event
+    $('body').on('click', '.notion-notifications-record div[role="button"]', function (event) {
+        var href = $(event.target).parents('a').attr('href');
+        if (href)
+        // Find trigger element click event
+        $(NOTION_DIV_SCROLL).find('a[href="'+href+'"] div[role="button"]').not('.notion-notifications-record div[role="button"]').click();
+
+        return false;
+    });
+
+    // Handle notion notification archive click event
+    $('body').on('mouseenter', '.notion-notifications-record', function (event) {
+        if(event.target.querySelector('.closeSmall')){
+            event.target.querySelector('.closeSmall').parentNode.style.opacity = 1;
+        }
+    });
+    // Mouseleave event
+    $('body').on('mouseleave', '.notion-notifications-record', function (event) {
+        if(event.target.querySelector('.closeSmall')){
+            event.target.querySelector('.closeSmall').parentNode.style.opacity = 0;
+        }
+    });
+    // Archive event
+    $('body').on('click', '.closeSmall', function (event) {
+        let indexId = $(event.target).parents('div[data-index]').attr('data-index');
+        $(NOTION_DIV_SCROLL).find('div[data-index="'+indexId+'"] .closeSmall').parent().click();        
+        let notificationId = $(event.target).parents('div[data-index]').parent().attr('data-page-type')
+        let notificationIdCount = parseInt($('[data-id="'+notificationId+'"]').find('.total-count').text());
+        $('[data-id="'+notificationId+'"]').find('.total-count').text(notificationIdCount - 1);
+        $('.notion-notifications-record[data-index="'+indexId+'"]').remove();
+        if ((notificationIdCount - 1) == 0) {
+            $('[data-id="'+notificationId+'"]').remove();
+        }
+    });
 });
 
 /**
@@ -160,6 +195,10 @@ async function injectScript(appendDiv = true) {
                 if (element.querySelector(NOTION_NOTIFICATION_DIV)) {
                     let notificationType = element.querySelector(NOTION_NOTIFICATION_DIV).innerText.replace(/^\s+|\s+$/gm, '');
                     if (item == notificationType) {
+                        // Set index
+                        if(element.querySelector('.closeSmall')){
+                            element.setAttribute("data-index", index);
+                        }
                         elementInnerHtml += '<div class="notion-notifications-record" data-index="' + index + '">' + element.innerHTML + '</div>';
                         if (element.querySelector('.notion-record-icon img')) {
                             notionEmoji = element.querySelector('.notion-record-icon img').parentNode.innerHTML;
@@ -277,6 +316,10 @@ async function getNextPageData() {
             if (element.querySelector(NOTION_NOTIFICATION_DIV)) {
                 let notificationsType = element.querySelector(NOTION_NOTIFICATION_DIV).innerText.replace(/^\s+|\s+$/gm, '');
                 if (item == notificationsType) {
+                    // Set index
+                    if(element.querySelector('.closeSmall')){
+                        element.setAttribute("data-index", index);
+                    }
                     if ($('div[data-page-type="' + encodePageID + '"]').find('[data-index="' + index + '"]').length === 0) {
                         notificationsHtml += '<div class="notion-notifications-record" data-index="' + index + '">' + element.innerHTML + '</div>';
                     }
