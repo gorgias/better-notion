@@ -14,7 +14,7 @@ switch (BUILD_MODE) {
         IS_LOG_ENABLED = true;
         break;
     case "STAGING":
-        IS_LOG_ENABLED = falsess;
+        IS_LOG_ENABLED = false;
         break;
     case "PRODUCTION":
         IS_LOG_ENABLED = false;

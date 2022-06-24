@@ -10,7 +10,7 @@ const config = {
     childList: true,
     subtree: true,
 };
-
+let IS_INBOX_TAB = 1;
 // Document ready
 $(document).ready(function () {
     // Handle page click event 
@@ -51,6 +51,7 @@ $(document).ready(function () {
             && !document.querySelector('#note_id')) {
             appendDiv = true;
         }
+
         injectScript(appendDiv);
     });
 
@@ -90,6 +91,15 @@ $(document).ready(function () {
             $('[data-id="'+notificationId+'"]').remove();
         }
     });
+    // Archive all notification event
+    $('body').on('click', '.archive-all-notification', function (event) {
+        let indexId = $(event.target).parents('div[data-id]').attr('data-id');
+        $('div[data-page-type="'+indexId+'"]').find('.notion-notifications-record').each(function(){
+            $(this).find('.closeSmall').trigger('click');
+        });
+
+        return false;
+    });
 });
 
 /**
@@ -102,7 +112,7 @@ new MutationObserver(function (mutations) {
     }
     // Handling menu tab event
     if (document.querySelector(NOTION_MAIN_DIV)) {
-        let focusElement = $('.hide-scrollbar .notion-updates-button-all-updates').parent().parent().find('div');
+        IS_INBOX_TAB = $('.hide-scrollbar .notion-updates-button-mentions').parent().parent().children().length;
         let noteIdElement = document.querySelector('#note_id')
         let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
 
@@ -227,6 +237,11 @@ async function injectScript(appendDiv = true) {
                         ${notionEmoji}
                     </div>
                     <span class="text-title">${item}</span>
+                    ${
+                        IS_INBOX_TAB > 1 ?
+                            `<div class="archive-all-notification"> ${archiveSvg(svgColor)} </div>`
+                        : ''
+                    }
                     <div class="total-count"> 0 </div>
                 </div>
                 <div style="display:none;" 
@@ -354,6 +369,11 @@ async function getNextPageData() {
                                     ${notionEmoji}
                                 </div>
                                 <span class="text-title">${item}</span>
+                                ${
+                                    IS_INBOX_TAB > 1 ?
+                                        `<div class="archive-all-notification"> ${archiveSvg(svgColor)} </div>`
+                                    : ''
+                                }
                                 <div class="total-count"> 0 </div>      
                         </div>
                         <div style="display:none;"  data-page-type = "${encodePageID}"
@@ -416,4 +436,15 @@ function recordCount() {
         let length = $(this).find('.notion-notifications-record').length;
         $('.custom-tag-added[data-id="' + pageId + '"] .total-count').html(length);
     });
+    // Hide Unarchive div
+    $(".notion-notifications-record div:contains('Unarchive')").filter(function() { return $(this).children().length === 0;}).parent().hide();
+}
+/**
+ * Get Archive SVG icon
+ * 
+ * @returns {String} for svg icon string 
+ */
+ function archiveSvg(svgColor) {
+    return `<svg viewBox="0 0 16 16" class="archive" style="width: 14px; height: 100%; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; margin-left: 0px; margin-right: 6px;">
+    <path d="M4.083 14.585h7.499c1.347 0 2.064-.697 2.064-2.037V5.739c.664-.11 1.019-.608 1.019-1.34V3.36c0-.834-.458-1.36-1.299-1.36H2.3C1.499 2 1 2.526 1 3.36V4.4c0 .73.355 1.23 1.019 1.34v6.808c0 1.347.717 2.037 2.064 2.037zM2.579 4.728c-.342 0-.478-.144-.478-.486v-.724c0-.342.136-.486.478-.486h10.514c.342 0 .472.144.472.486v.724c0 .342-.13.486-.472.486H2.579zm1.49 8.825c-.615 0-.95-.335-.95-.95V5.76h9.427v6.842c0 .616-.342.95-.95.95H4.069zM5.58 8.515h4.512c.287 0 .492-.199.492-.5v-.218c0-.3-.205-.492-.492-.492H5.58c-.287 0-.485.191-.485.492v.219c0 .3.198.499.485.499z"></path></svg>`;
 }
