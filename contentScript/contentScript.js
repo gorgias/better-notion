@@ -621,14 +621,18 @@ function archiveSvg(svgColor) {
  * Return filter space and follow & Unfollow record
  */
 async function getSpace() {
-  let spaceName = document
-    .querySelector(".notion-sidebar-switcher.notion-focusable")
-    .textContent.slice(1);
+  let spaceName = $(".notion-sidebar-switcher.notion-focusable")
+    .children()
+    .children()
+    .eq(1)
+    .text();
   let spaceID = 0;
 
   let spaces = await getSpaceDetails();
   let allSpaces = Object.values(spaces)[0].space;
   let allBlock = Object.values(spaces)[0].block;
+  let notionUser = Object.values(spaces)[0].notion_user;
+  notionUser = Object.values(notionUser)[0].value;
   Object.values(allSpaces).map(function (item) {
     if (item.value.name && item.value.name == spaceName) {
       spaceID = item.value.id;
@@ -636,18 +640,63 @@ async function getSpace() {
   });
 
   let notification = await getNotificationLog(spaceID);
-  let followUp = notification.recordMap.follow;
+  let followUp = notification.recordMap.follow ?? [];
+  followUp = Object.values(followUp).map(function (item) {
+    return item.value;
+  });
+  // Object.values(allBlock).map(function (item) {
+  for (var i = 0; i < Object.values(allBlock).length; i++) {
+    var item = Object.values(allBlock)[i];
+    if (
+      item.value.space_id &&
+      item.value.collection_id &&
+      item.value.space_id == spaceID
+    ) {
+      let notification = await getPageActivity(
+        spaceID,
+        item.value.id,
+        item.value.collection_id
+      );
+      let collection = notification.recordMap.collection ?? [];
+      let followRecordDetails = notification.recordMap.follow ?? [];
+      let followRecordName = Object.values(collection)[0]
+        .value.name.map(function (name) {
+          return name[0] ?? null;
+        })
+        .filter(function (name) {
+          return name != undefined;
+        });
+      let followRecord = Object.values(followRecordDetails)[0].value ?? [];
+      if (!Object.values(followRecord).length) {
+        followRecord = {
+          following: false,
+          id: Object.keys(followRecordDetails)[0] ?? "",
+          navigable_block_id: item.value.id,
+          space_id: spaceID,
+          user_id: notionUser.id,
+          version: 1,
+        };
+      }
+      followRecord.name = followRecordName.join("") ?? "";
+      followUp.push(followRecord);
+    }
+  }
+  // });
+  // getPageActivity(spaceID, navigableBlockId, collectionId)
+
   followUnFollow = Object.values(followUp).map(function (item) {
-    let followRecord = item.value;
-    let followName = allBlock[followRecord.navigable_block_id].value ?? [];
-    let followRecordName = followName.properties.title
-      .map(function (name) {
-        return name[0] ?? null;
-      })
-      .filter(function (name) {
-        return name != undefined;
-      });
-    followRecord.name = followRecordName.join("") ?? "";
+    let followRecord = item;
+    if (item.name == undefined) {
+      let followName = allBlock[followRecord.navigable_block_id].value ?? [];
+      let followRecordName = followName.properties.title
+        .map(function (name) {
+          return name[0] ?? null;
+        })
+        .filter(function (name) {
+          return name != undefined;
+        });
+      followRecord.name = followRecordName.join("") ?? "";
+    }
 
     return followRecord;
   });
@@ -695,6 +744,41 @@ function getNotificationLog(spaceID) {
         spaceId: spaceID,
         size: 100,
         type: "mentions",
+      }),
+    };
+
+    $.ajax(settings).done(function (response) {
+      resolve(response);
+    });
+  });
+}
+/**
+ * Return following record
+ *
+ * @param {String} spaceID for notion space id
+ *
+ * @returns {Object} return record object
+ */
+function getPageActivity(spaceID, navigableBlockId, collectionId) {
+  return new Promise((resolve) => {
+    var settings = {
+      url: "https://www.notion.so/api/v3/getActivityLog",
+      method: "POST",
+      timeout: 0,
+      headers: {
+        accept: "*/*",
+        "content-type": "application/json",
+      },
+      data: JSON.stringify({
+        spaceId: spaceID,
+        navigableBlock: {
+          id: navigableBlockId,
+        },
+        collection: {
+          id: collectionId,
+        },
+        limit: 20,
+        activityTypes: [],
       }),
     };
 
