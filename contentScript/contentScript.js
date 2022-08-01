@@ -326,10 +326,11 @@ async function injectScript(appendDiv = true) {
           return item != undefined;
         });
 
-      let followBtnHtml = getFollowPageDetails(item);
-
       let encodePageID = window.btoa(unescape(encodeURIComponent(item)));
       encodePageID = encodePageID.replace(new RegExp("=", "g"), "");
+
+      let followBtnHtml = getFollowPageDetails(item);
+
       let addClass = $("body").hasClass("dark") ? "dark-color" : "";
       let svgColor = $("body").hasClass("dark")
         ? "rgba(255, 255, 255, 0.443)"
@@ -627,6 +628,7 @@ async function getSpace() {
     .eq(1)
     .text();
   let spaceID = 0;
+  let spacePages = [];
 
   let spaces = await getSpaceDetails();
   let allSpaces = Object.values(spaces)[0].space;
@@ -636,17 +638,52 @@ async function getSpace() {
   Object.values(allSpaces).map(function (item) {
     if (item.value.name && item.value.name == spaceName) {
       spaceID = item.value.id;
+      spacePages = item.value.pages;
     }
   });
-
   let notification = await getNotificationLog(spaceID);
   let followUp = notification.recordMap.follow ?? [];
   followUp = Object.values(followUp).map(function (item) {
     return item.value;
   });
-  // Object.values(allBlock).map(function (item) {
+  let firstPageId = spacePages[0] ?? "";
   for (var i = 0; i < Object.values(allBlock).length; i++) {
     var item = Object.values(allBlock)[i];
+    // Get Follow and UnFollow in page
+    if (
+      spacePages.indexOf(item.value.id) > -1 &&
+      item.value.space_id == spaceID &&
+      item.value.collection_id == undefined
+    ) {
+      let notification = await getPageActivity(spaceID, item.value.id, spaceID);
+      let followRecordDetails = notification.recordMap.follow ?? [];
+      let followRecord = Object.values(followRecordDetails)[0].value ?? [];
+      if (!Object.values(followRecord).length) {
+        followRecord = {
+          following: false,
+          id: Object.keys(followRecordDetails)[0] ?? "",
+          navigable_block_id: item.value.id,
+          space_id: spaceID,
+          user_id: notionUser.id,
+          version: 1,
+        };
+      }
+      followUp.push(followRecord);
+      // Space Follow and unFollow record
+      if (firstPageId && item.value.id == firstPageId) {
+        let spaceFollowRecord = {
+          following: false,
+          id: followRecord.id ?? "",
+          navigable_block_id: followRecord.navigable_block_id,
+          space_id: spaceID,
+          user_id: notionUser.id,
+          version: 1,
+          name: spaceName,
+        };
+        followUp.push(spaceFollowRecord);
+      }
+    }
+    // Get Follow and UnFollow in collection
     if (
       item.value.space_id &&
       item.value.collection_id &&
@@ -681,8 +718,6 @@ async function getSpace() {
       followUp.push(followRecord);
     }
   }
-  // });
-  // getPageActivity(spaceID, navigableBlockId, collectionId)
 
   followUnFollow = Object.values(followUp).map(function (item) {
     let followRecord = item;
@@ -697,6 +732,29 @@ async function getSpace() {
         });
       followRecord.name = followRecordName.join("") ?? "";
     }
+
+    // set follow and unfollow text
+    let encodePageID = window.btoa(
+      unescape(encodeURIComponent(formateString(followRecord.name)))
+    );
+    encodePageID = encodePageID.replace(new RegExp("=", "g"), "");
+    let encodePageDetail = window.btoa(
+      unescape(encodeURIComponent(JSON.stringify(followRecord)))
+    );
+    let isFollow = followRecord.following;
+    let followBtn = isFollow ? "U" : "F";
+    if (!$('[data-follow-page-id="' + encodePageID + '"]').html()) {
+      $('[data-follow-page-id="' + encodePageID + '"]').attr(
+        "data-follow",
+        isFollow
+      );
+      $('[data-follow-page-id="' + encodePageID + '"]').attr(
+        "data-scam",
+        encodePageDetail
+      );
+      $('[data-follow-page-id="' + encodePageID + '"]').html(followBtn);
+    }
+    // end
 
     return followRecord;
   });
@@ -774,9 +832,6 @@ function getPageActivity(spaceID, navigableBlockId, collectionId) {
         navigableBlock: {
           id: navigableBlockId,
         },
-        collection: {
-          id: collectionId,
-        },
         limit: 20,
         activityTypes: [],
       }),
@@ -805,15 +860,17 @@ function getFollowPageDetails(title) {
       .filter(function (item) {
         return item != undefined;
       })[0] ?? [];
-
-  let followBtnHtml = "";
+  let pageId = formateString(title);
+  pageId = window.btoa(unescape(encodeURIComponent(pageId)));
+  pageId = pageId.replace(new RegExp("=", "g"), "");
+  let followBtnHtml = `<div class="follow-btn" data-follow-page-id="${pageId}" data-follow='' data-scam=""></div>`;
   if (pageDetails.following != undefined) {
     let encodePageDetail = window.btoa(
       unescape(encodeURIComponent(JSON.stringify(pageDetails)))
     );
     let isFollow = pageDetails.following;
     let followBtn = isFollow ? "U" : "F";
-    followBtnHtml = `<div class="follow-btn" data-follow='${isFollow}' data-scam="${encodePageDetail}" > ${followBtn} </div>`;
+    followBtnHtml = `<div class="follow-btn" data-follow-page-id="${pageId}" data-follow='${isFollow}' data-scam="${encodePageDetail}" > ${followBtn} </div>`;
   }
 
   return followBtnHtml;
