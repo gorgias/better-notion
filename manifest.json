@@ -1,6 +1,6 @@
 {
   "name": "Notion Notification Manager",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Notion notification manager extension helps you to group notions notification.",
   "manifest_version": 3,
   "icons": {

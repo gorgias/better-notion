@@ -12,6 +12,7 @@ const config = {
 };
 let IS_INBOX_TAB = 1;
 let followUnFollow = [];
+let updateSpaceName = "";
 // Document ready
 $(document).ready(function () {
   // Handle page click event
@@ -56,7 +57,7 @@ $(document).ready(function () {
     ) {
       appendDiv = true;
     }
-
+    getSpace(false);
     injectScript(appendDiv);
   });
 
@@ -212,6 +213,7 @@ new MutationObserver(function (mutations) {
       return false;
     }
   }
+  getSpace();
 }).observe(body, config);
 
 /**
@@ -233,7 +235,7 @@ async function injectScript(appendDiv = true) {
     if (!appendDiv) {
       await waitFor(300);
     }
-    getSpace();
+
     // Create custom clone element.
     let targetElementMain = document.querySelector(NOTION_MAIN_DIV);
     let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
@@ -620,13 +622,21 @@ function archiveSvg(svgColor) {
 }
 /**
  * Return filter space and follow & Unfollow record
+ *
+ * @param {boolean} isAllow is allow called
+ *
+ * @returns
  */
-async function getSpace() {
+async function getSpace(isAllow = true) {
   let spaceName = $(".notion-sidebar-switcher.notion-focusable")
     .children()
     .children()
     .eq(1)
     .text();
+  if ((updateSpaceName == spaceName || spaceName == "") && isAllow) {
+    return true;
+  }
+  updateSpaceName = spaceName;
   let spaceID = 0;
   let spacePages = [];
 
@@ -672,7 +682,7 @@ async function getSpace() {
       // Space Follow and unFollow record
       if (firstPageId && item.value.id == firstPageId) {
         let spaceFollowRecord = {
-          following: false,
+          following: followRecord.following ?? true,
           id: followRecord.id ?? "",
           navigable_block_id: followRecord.navigable_block_id,
           space_id: spaceID,
@@ -719,45 +729,52 @@ async function getSpace() {
     }
   }
 
-  followUnFollow = Object.values(followUp).map(function (item) {
-    let followRecord = item;
-    if (item.name == undefined) {
-      let followName = allBlock[followRecord.navigable_block_id].value ?? [];
-      let followRecordName = followName.properties.title
-        .map(function (name) {
-          return name[0] ?? null;
-        })
-        .filter(function (name) {
-          return name != undefined;
-        });
-      followRecord.name = followRecordName.join("") ?? "";
-    }
+  followUnFollow = Object.values(followUp)
+    .map(function (item) {
+      if (item == undefined) {
+        return null;
+      }
+      let followRecord = item;
+      if (item.name == undefined) {
+        let followName = allBlock[followRecord.navigable_block_id].value ?? [];
+        let followRecordName = followName.properties.title
+          .map(function (name) {
+            return name[0] ?? null;
+          })
+          .filter(function (name) {
+            return name != undefined;
+          });
+        followRecord.name = followRecordName.join("") ?? "";
+      }
 
-    // set follow and unfollow text
-    let encodePageID = window.btoa(
-      unescape(encodeURIComponent(formateString(followRecord.name)))
-    );
-    encodePageID = encodePageID.replace(new RegExp("=", "g"), "");
-    let encodePageDetail = window.btoa(
-      unescape(encodeURIComponent(JSON.stringify(followRecord)))
-    );
-    let isFollow = followRecord.following;
-    let followBtn = isFollow ? "U" : "F";
-    if (!$('[data-follow-page-id="' + encodePageID + '"]').html()) {
-      $('[data-follow-page-id="' + encodePageID + '"]').attr(
-        "data-follow",
-        isFollow
+      // set follow and unfollow text
+      let encodePageID = window.btoa(
+        unescape(encodeURIComponent(formateString(followRecord.name)))
       );
-      $('[data-follow-page-id="' + encodePageID + '"]').attr(
-        "data-scam",
-        encodePageDetail
+      encodePageID = encodePageID.replace(new RegExp("=", "g"), "");
+      let encodePageDetail = window.btoa(
+        unescape(encodeURIComponent(JSON.stringify(followRecord)))
       );
-      $('[data-follow-page-id="' + encodePageID + '"]').html(followBtn);
-    }
-    // end
+      let isFollow = followRecord.following;
+      let followBtn = isFollow ? "U" : "F";
+      if (!$('[data-follow-page-id="' + encodePageID + '"]').html()) {
+        $('[data-follow-page-id="' + encodePageID + '"]').attr(
+          "data-follow",
+          isFollow
+        );
+        $('[data-follow-page-id="' + encodePageID + '"]').attr(
+          "data-scam",
+          encodePageDetail
+        );
+        $('[data-follow-page-id="' + encodePageID + '"]').html(followBtn);
+      }
+      // end
 
-    return followRecord;
-  });
+      return followRecord;
+    })
+    .filter(function (name) {
+      return name != undefined;
+    });
 }
 /**
  * Get space details
