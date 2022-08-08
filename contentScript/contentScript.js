@@ -627,6 +627,7 @@ function archiveSvg(svgColor) {
  *
  * @returns
  */
+let notionUser = [];
 async function getSpace(isAllow = true) {
   let spaceName = $(".notion-sidebar-switcher.notion-focusable")
     .children()
@@ -643,7 +644,7 @@ async function getSpace(isAllow = true) {
   let spaces = await getSpaceDetails();
   let allSpaces = Object.values(spaces)[0].space;
   let allBlock = Object.values(spaces)[0].block;
-  let notionUser = Object.values(spaces)[0].notion_user;
+  notionUser = Object.values(spaces)[0].notion_user;
   notionUser = Object.values(notionUser)[0].value;
   Object.values(allSpaces).map(function (item) {
     if (item.value.name && item.value.name == spaceName) {
@@ -728,13 +729,15 @@ async function getSpace(isAllow = true) {
       followUp.push(followRecord);
     }
   }
-
   followUnFollow = Object.values(followUp)
     .map(function (item) {
-      if (item == undefined) {
+      let followRecord = item;
+      if (followRecord == undefined) {
         return null;
       }
-      let followRecord = item;
+      if (allBlock[followRecord.navigable_block_id] == undefined) {
+        return;
+      }
       if (item.name == undefined) {
         let followName = allBlock[followRecord.navigable_block_id].value ?? [];
         let followRecordName = followName.properties.title
