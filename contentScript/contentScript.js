@@ -363,7 +363,7 @@ async function injectScript(appendDiv = true) {
                     <span class="text-title">${item}</span>
                     ${
                       IS_INBOX_TAB > 1
-                        ? `<div class="archive-all-notification"> ${archiveSvg(
+                        ? `<div class="archive-all-notification" title="Archive all notifications"> ${archiveSvg(
                             svgColor
                           )} </div>`
                         : ""
@@ -653,7 +653,8 @@ function getFollowPageDetails(title) {
     );
     let isFollow = pageDetails.following;
     let followBtn = isFollow ? "U" : "F";
-    followBtnHtml = `<div class="follow-btn" data-follow-page-id="${pageId}" data-follow='${isFollow}' data-scam="${encodePageDetail}" > ${followBtn} </div>`;
+    let followBtnTitle = isFollow ? "Unfollow notificatons of this document" : "Follow notificatons of this document";
+    followBtnHtml = `<div class="follow-btn" data-follow-page-id="${pageId}" data-follow='${isFollow}' data-scam="${encodePageDetail}" title="${followBtnTitle}" > ${followBtn} </div>`;
   }
 
   return followBtnHtml;
