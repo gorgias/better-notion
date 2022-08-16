@@ -11,8 +11,12 @@ const config = {
   subtree: true,
 };
 let IS_INBOX_TAB = 1;
-let followUnFollow = [];
-let updateSpaceName = "";
+
+let notionUser = [];
+let spaceID = 0;
+let spaceName = "";
+let followNamesArray = [];
+let followUp = [];
 // Document ready
 $(document).ready(function () {
   // Handle page click event
@@ -57,7 +61,6 @@ $(document).ready(function () {
     ) {
       appendDiv = true;
     }
-    getSpace(false);
     injectScript(appendDiv);
   });
 
@@ -213,7 +216,6 @@ new MutationObserver(function (mutations) {
       return false;
     }
   }
-  getSpace();
 }).observe(body, config);
 
 /**
@@ -236,6 +238,8 @@ async function injectScript(appendDiv = true) {
       await waitFor(300);
     }
 
+    followUp = [];
+    followNamesArray = [];
     // Create custom clone element.
     let targetElementMain = document.querySelector(NOTION_MAIN_DIV);
     let scrollElement = document.querySelector(NOTION_DIV_SCROLL);
@@ -267,7 +271,6 @@ async function injectScript(appendDiv = true) {
     let targetElement =
       document.querySelector(NOTION_DIV_SCROLL).childNodes[0].childNodes[0]
         .childNodes[0];
-
     let notificationsTypes = await getNotionNotificationTypes();
     if (
       targetElement.length === 0 ||
@@ -610,6 +613,7 @@ function recordCount() {
     })
     .parent()
     .hide();
+  setFollowAndUnFollowBtn();
 }
 /**
  * Get Archive SVG icon
@@ -620,258 +624,17 @@ function archiveSvg(svgColor) {
   return `<svg viewBox="0 0 16 16" class="archive" style="width: 14px; height: 100%; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; margin-left: 0px; margin-right: 6px;">
     <path d="M4.083 14.585h7.499c1.347 0 2.064-.697 2.064-2.037V5.739c.664-.11 1.019-.608 1.019-1.34V3.36c0-.834-.458-1.36-1.299-1.36H2.3C1.499 2 1 2.526 1 3.36V4.4c0 .73.355 1.23 1.019 1.34v6.808c0 1.347.717 2.037 2.064 2.037zM2.579 4.728c-.342 0-.478-.144-.478-.486v-.724c0-.342.136-.486.478-.486h10.514c.342 0 .472.144.472.486v.724c0 .342-.13.486-.472.486H2.579zm1.49 8.825c-.615 0-.95-.335-.95-.95V5.76h9.427v6.842c0 .616-.342.95-.95.95H4.069zM5.58 8.515h4.512c.287 0 .492-.199.492-.5v-.218c0-.3-.205-.492-.492-.492H5.58c-.287 0-.485.191-.485.492v.219c0 .3.198.499.485.499z"></path></svg>`;
 }
-/**
- * Return filter space and follow & Unfollow record
- *
- * @param {boolean} isAllow is allow called
- *
- * @returns
- */
-let notionUser = [];
-async function getSpace(isAllow = true) {
-  let spaceName = $(".notion-sidebar-switcher.notion-focusable")
-    .children()
-    .children()
-    .eq(1)
-    .text();
-  if ((updateSpaceName == spaceName || spaceName == "") && isAllow) {
-    return true;
-  }
-  updateSpaceName = spaceName;
-  let spaceID = 0;
-  let spacePages = [];
 
-  let spaces = await getSpaceDetails();
-  let allSpaces = Object.values(spaces)[0].space;
-  let allBlock = Object.values(spaces)[0].block;
-  notionUser = Object.values(spaces)[0].notion_user;
-  notionUser = Object.values(notionUser)[0].value;
-  Object.values(allSpaces).map(function (item) {
-    if (item.value.name && item.value.name == spaceName) {
-      spaceID = item.value.id;
-      spacePages = item.value.pages;
-    }
-  });
-  let notification = await getNotificationLog(spaceID);
-  let followUp = notification.recordMap.follow ?? [];
-  followUp = Object.values(followUp).map(function (item) {
-    return item.value;
-  });
-  let firstPageId = spacePages[0] ?? "";
-  for (var i = 0; i < Object.values(allBlock).length; i++) {
-    var item = Object.values(allBlock)[i];
-    // Get Follow and UnFollow in page
-    if (
-      spacePages.indexOf(item.value.id) > -1 &&
-      item.value.space_id == spaceID &&
-      item.value.collection_id == undefined
-    ) {
-      let notification = await getPageActivity(spaceID, item.value.id, spaceID);
-      let followRecordDetails = notification.recordMap.follow ?? [];
-      let followRecord = Object.values(followRecordDetails)[0].value ?? [];
-      if (!Object.values(followRecord).length) {
-        followRecord = {
-          following: false,
-          id: Object.keys(followRecordDetails)[0] ?? "",
-          navigable_block_id: item.value.id,
-          space_id: spaceID,
-          user_id: notionUser.id,
-          version: 1,
-        };
-      }
-      followUp.push(followRecord);
-      // Space Follow and unFollow record
-      if (firstPageId && item.value.id == firstPageId) {
-        let spaceFollowRecord = {
-          following: followRecord.following ?? true,
-          id: followRecord.id ?? "",
-          navigable_block_id: followRecord.navigable_block_id,
-          space_id: spaceID,
-          user_id: notionUser.id,
-          version: 1,
-          name: spaceName,
-        };
-        followUp.push(spaceFollowRecord);
-      }
-    }
-    // Get Follow and UnFollow in collection
-    if (
-      item.value.space_id &&
-      item.value.collection_id &&
-      item.value.space_id == spaceID
-    ) {
-      let notification = await getPageActivity(
-        spaceID,
-        item.value.id,
-        item.value.collection_id
-      );
-      let collection = notification.recordMap.collection ?? [];
-      let followRecordDetails = notification.recordMap.follow ?? [];
-      let followRecordName = Object.values(collection)[0]
-        .value.name.map(function (name) {
-          return name[0] ?? null;
-        })
-        .filter(function (name) {
-          return name != undefined;
-        });
-      let followRecord = Object.values(followRecordDetails)[0].value ?? [];
-      if (!Object.values(followRecord).length) {
-        followRecord = {
-          following: false,
-          id: Object.keys(followRecordDetails)[0] ?? "",
-          navigable_block_id: item.value.id,
-          space_id: spaceID,
-          user_id: notionUser.id,
-          version: 1,
-        };
-      }
-      followRecord.name = followRecordName.join("") ?? "";
-      followUp.push(followRecord);
-    }
-  }
-  followUnFollow = Object.values(followUp)
-    .map(function (item) {
-      let followRecord = item;
-      if (followRecord == undefined) {
-        return null;
-      }
-      if (allBlock[followRecord.navigable_block_id] == undefined) {
-        return;
-      }
-      if (item.name == undefined) {
-        let followName = allBlock[followRecord.navigable_block_id].value ?? [];
-        let followRecordName = followName.properties.title
-          .map(function (name) {
-            return name[0] ?? null;
-          })
-          .filter(function (name) {
-            return name != undefined;
-          });
-        followRecord.name = followRecordName.join("") ?? "";
-      }
-
-      // set follow and unfollow text
-      let encodePageID = window.btoa(
-        unescape(encodeURIComponent(formateString(followRecord.name)))
-      );
-      encodePageID = encodePageID.replace(new RegExp("=", "g"), "");
-      let encodePageDetail = window.btoa(
-        unescape(encodeURIComponent(JSON.stringify(followRecord)))
-      );
-      let isFollow = followRecord.following;
-      let followBtn = isFollow ? "U" : "F";
-      if (!$('[data-follow-page-id="' + encodePageID + '"]').html()) {
-        $('[data-follow-page-id="' + encodePageID + '"]').attr(
-          "data-follow",
-          isFollow
-        );
-        $('[data-follow-page-id="' + encodePageID + '"]').attr(
-          "data-scam",
-          encodePageDetail
-        );
-        $('[data-follow-page-id="' + encodePageID + '"]').html(followBtn);
-      }
-      // end
-
-      return followRecord;
-    })
-    .filter(function (name) {
-      return name != undefined;
-    });
-}
 /**
- * Get space details
- *
- * @returns {Object} return record object
- */
-async function getSpaceDetails() {
-  return new Promise((resolve) => {
-    var settings = {
-      url: "https://www.notion.so/api/v3/getSpaces",
-      method: "POST",
-      timeout: 0,
-      headers: {
-        accept: "*/*",
-        "content-type": "application/json",
-      },
-      data: JSON.stringify({}),
-    };
-    $.ajax(settings).done(function (response) {
-      resolve(response);
-    });
-  });
-}
-/**
- * Return following record
- *
- * @param {String} spaceID for notion space id
- *
- * @returns {Object} return record object
- */
-function getNotificationLog(spaceID) {
-  return new Promise((resolve) => {
-    var settings = {
-      url: "https://www.notion.so/api/v3/getNotificationLog",
-      method: "POST",
-      timeout: 0,
-      headers: {
-        accept: "*/*",
-        "content-type": "application/json",
-      },
-      data: JSON.stringify({
-        spaceId: spaceID,
-        size: 100,
-        type: "mentions",
-      }),
-    };
-
-    $.ajax(settings).done(function (response) {
-      resolve(response);
-    });
-  });
-}
-/**
- * Return following record
- *
- * @param {String} spaceID for notion space id
- *
- * @returns {Object} return record object
- */
-function getPageActivity(spaceID, navigableBlockId, collectionId) {
-  return new Promise((resolve) => {
-    var settings = {
-      url: "https://www.notion.so/api/v3/getActivityLog",
-      method: "POST",
-      timeout: 0,
-      headers: {
-        accept: "*/*",
-        "content-type": "application/json",
-      },
-      data: JSON.stringify({
-        spaceId: spaceID,
-        navigableBlock: {
-          id: navigableBlockId,
-        },
-        limit: 20,
-        activityTypes: [],
-      }),
-    };
-
-    $.ajax(settings).done(function (response) {
-      resolve(response);
-    });
-  });
-}
-/**
- * Return follow and unfollow html
+ * Return follow and unFollow html
  *
  * @param {String} title for notion record page title
  *
- * @returns {String} return HTML for follow and unfollow
+ * @returns {String} return HTML for follow and unFollow
  */
 function getFollowPageDetails(title) {
   let pageDetails =
-    followUnFollow
+    followUp
       .map(function (item) {
         if (formateString(item.name) == formateString(title)) {
           return item;
@@ -908,4 +671,250 @@ function formateString(pageTitleName) {
   pageTitle = pageTitle.replaceAll(/\s/g, "");
 
   return pageTitle;
+}
+/**
+ * Return following record
+ *
+ * @param {String} spaceID for notion space id
+ *
+ * @returns {Object} return record object
+ */
+function getPageActivity(spaceID, navigableBlockId, collectionId) {
+  return new Promise((resolve) => {
+    var settings = {
+      url: "https://www.notion.so/api/v3/getActivityLog",
+      method: "POST",
+      timeout: 0,
+      headers: {
+        accept: "*/*",
+        "content-type": "application/json",
+      },
+      data: JSON.stringify({
+        spaceId: spaceID,
+        navigableBlock: {
+          id: navigableBlockId,
+        },
+        limit: 20,
+        activityTypes: [],
+      }),
+    };
+
+    $.ajax(settings).done(function (response) {
+      resolve(response);
+    });
+  });
+}
+/**
+ * Monkey pach event listier
+ */
+let channel = new BroadcastChannel("notion-monkey-channel");
+channel.addEventListener("message", (event) => {
+  if (
+    event.data != undefined &&
+    event.data.type == "getPublicPageData" &&
+    event.data.type != undefined
+  ) {
+    if (
+      event.data.response != undefined &&
+      Object.keys(event.data.response).length
+    ) {
+      followNamesArray = [];
+      followUp = [];
+      spaceID = event.data.response.spaceId;
+      spaceName = event.data.response.spaceName;
+    }
+  }
+  if (
+    event.data != undefined &&
+    event.data.type == "getUserAnalyticsSettings" &&
+    event.data.type != undefined
+  ) {
+    if (
+      event.data.response != undefined &&
+      Object.keys(event.data.response).length
+    ) {
+      notionUser = event.data.response;
+    }
+  }
+  if (
+    event.data != undefined &&
+    event.data.type == "getActivityLog" &&
+    event.data.type != undefined
+  ) {
+    if (
+      event.data.response != undefined &&
+      Object.keys(event.data.response).length
+    ) {
+      loadActivityPages(event);
+    }
+  }
+  if (
+    event.data != undefined &&
+    event.data.type == "getNotificationLog" &&
+    event.data.type != undefined
+  ) {
+    if (
+      event.data.response != undefined &&
+      Object.keys(event.data.response).length
+    ) {
+      loadActivityPages(event);
+    }
+  }
+});
+
+/**
+ * Set Follow and unFollow button
+ *
+ * @param {Object} event request event
+ */
+async function loadActivityPages(event) {
+  let notionNotification = event.data.response.recordMap;
+  let activities = notionNotification.activity ?? [];
+  let allBlock = notionNotification.block ?? [];
+  let spaces = notionNotification.space ?? [];
+  let collection = notionNotification.collection ?? [];
+  let spacesPages = Object.values(spaces)[0].value.value ?? [];
+  let firstPageId =
+    spacesPages.pages != undefined && spacesPages.pages.length
+      ? spacesPages.pages[0]
+      : "";
+  // Get Collection Details
+  for (var i = 0; i < Object.values(collection).length; i++) {
+    var item = Object.values(collection)[i].value ?? [];
+    if (item.value === undefined) {
+      continue;
+    }
+    if (item.value.name === undefined) {
+      continue;
+    }
+    if (item.value.parent_table === "block") {
+      var followName = item.value.name ?? [];
+      followName = followName.join("");
+      if (followNamesArray.indexOf(followName) > 0) {
+        continue;
+      }
+      followNamesArray.push(followName);
+      let notification = await getPageActivity(
+        spaceID,
+        item.value.parent_id,
+        []
+      );
+      let followRecordDetails = notification.recordMap.follow ?? [];
+      let followRecord = Object.values(followRecordDetails)[0].value ?? [];
+      if (!Object.values(followRecord).length) {
+        followRecord = {
+          following: false,
+          id: Object.keys(followRecordDetails)[0] ?? "",
+          navigable_block_id: item.value.parent_id,
+          space_id: spaceID,
+          user_id: notionUser.user_id,
+          version: 1,
+          name: followName,
+        };
+      }
+      followRecord.name = followName;
+      followUp.push(followRecord);
+    }
+  }
+  // Get activities details
+  for (var i = 0; i < Object.values(activities).length; i++) {
+    var item = Object.values(activities)[i].value ?? [];
+
+    if (item.value === undefined) {
+      continue;
+    }
+    if (item.value.parent_table === undefined) {
+      continue;
+    }
+    var followName = "";
+    // Get Block page details
+    if (item.value.parent_table === "block") {
+      let blockId = item.value.parent_id;
+      let block = allBlock[blockId].value ?? [];
+      if (block.value.properties === undefined) {
+        continue;
+      }
+      var followName = block.value.properties.title ?? [];
+      let followRecordName = followName
+        .map(function (name) {
+          return name[0] ?? null;
+        })
+        .filter(function (name) {
+          return name != undefined;
+        });
+      followName = followRecordName.join("");
+      if (followNamesArray.indexOf(followName) > 0) {
+        continue;
+      }
+      followNamesArray.push(followName);
+
+      let notification = await getPageActivity(spaceID, block.value.id, []);
+      let followRecordDetails = notification.recordMap.follow ?? [];
+      let followRecord = Object.values(followRecordDetails)[0].value ?? [];
+      if (!Object.values(followRecord).length) {
+        followRecord = {
+          following: false,
+          id: Object.keys(followRecordDetails)[0] ?? "",
+          navigable_block_id: block.value.id,
+          space_id: spaceID,
+          user_id: notionUser.user_id,
+          version: 1,
+          name: followName,
+        };
+      }
+      followRecord.name = followName;
+      followUp.push(followRecord);
+      // First Page notes
+      // Space Follow and unFollow record
+      if (firstPageId && block.value.id == firstPageId) {
+        let spaceFollowRecord = {
+          following: followRecord.following ?? true,
+          id: followRecord.id ?? "",
+          navigable_block_id: followRecord.navigable_block_id,
+          space_id: spaceID,
+          user_id: notionUser.user_id,
+          version: 1,
+          name: spaceName,
+        };
+        followUp.push(spaceFollowRecord);
+      }
+    }
+    // Get Space
+    if (item.value.parent_table === "space") {
+      let blockId = item.value.parent_id;
+      let block = spaces[blockId].value ?? [];
+      followName = block.value.name ?? "";
+    }
+  }
+  // set follow and unFollow button
+  setFollowAndUnFollowBtn();
+}
+/**
+ * Set Follow and unFollow text in page
+ */
+function setFollowAndUnFollowBtn() {
+  for (var i = 0; i < followUp.length; i++) {
+    var followRecord = followUp[i] ?? [];
+    // set follow and unFollow text
+    let encodePageID = window.btoa(
+      unescape(encodeURIComponent(formateString(followRecord.name)))
+    );
+    encodePageID = encodePageID.replace(new RegExp("=", "g"), "");
+    let encodePageDetail = window.btoa(
+      unescape(encodeURIComponent(JSON.stringify(followRecord)))
+    );
+    let isFollow = followRecord.following;
+    let followBtn = isFollow ? "U" : "F";
+    if (!$('[data-follow-page-id="' + encodePageID + '"]').html()) {
+      $('[data-follow-page-id="' + encodePageID + '"]').attr(
+        "data-follow",
+        isFollow
+      );
+      $('[data-follow-page-id="' + encodePageID + '"]').attr(
+        "data-scam",
+        encodePageDetail
+      );
+      $('[data-follow-page-id="' + encodePageID + '"]').html(followBtn);
+    }
+  }
 }
