@@ -1,6 +1,6 @@
 {
   "name": "Notion Notification Manager",
-  "version": "0.0.4",
+  "version": "0.0.7",
   "description": "Notion notification manager extension helps you to group notions notification.",
   "manifest_version": 3,
   "icons": {
@@ -27,8 +27,19 @@
       "matches": [
         "https://www.notion.so/*"
       ],
+      "run_at": "document_start",
+      "all_frames": false,
+      "js": [
+        "lib/js/jquery-3.5.1.min.js",
+        "contentScript/injectScript.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.notion.so/*"
+      ],
       "run_at": "document_end",
-      "all_frames": true,
+      "all_frames": false,
       "css": [
         "css/custom.css"
       ],
@@ -40,6 +51,15 @@
       ]
     }
   ],
-  "web_accessible_resources": [],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "contentScript/*.js"
+      ]
+    }
+  ],
   "content_security_policy": {}
 }
