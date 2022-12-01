@@ -17,181 +17,191 @@ let spaceID = 0;
 let spaceName = "";
 let followNamesArray = [];
 let followUp = [];
-// Document ready
-$(document).ready(function () {
-  // Handle page click event
-  $("body").on("click", ".custom-tag-added", function (event) {
-    let pageId = $(this).attr("data-id") ?? "";
-    let svgColor = $("body").hasClass("dark")
-      ? "rgba(255, 255, 255, 0.443)"
-      : "rgba(55, 53, 47, 0.45)";
-    if (pageId) {
-      let pageDataDiv = $('[data-page-type="' + pageId + '"]');
-      if (!pageDataDiv.is(":visible")) {
-        pageDataDiv.css("display", "block");
-        $(this).find(".custom-svg").html(`
-                    <svg
-                    viewBox="0 0 100 100"
-                    class="triangle"
-                    style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(180deg); opacity: 1;"
-                >
-                    <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
-                </svg>
-                `);
-      } else {
-        pageDataDiv.css("display", "none");
-        $(this).find(".custom-svg").html(`<svg
-                    viewBox="0 0 100 100"
-                    class="triangle"
-                    style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(90deg); opacity: 1;"
-                >
-                    <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
-                </svg>
-                `);
-      }
-    }
-  });
 
-  // Handle notion notification div scroll event
-  $("body").on("click", ".hide-scrollbar .notion-focusable", function () {
-    let appendDiv = false;
-    if (
-      document.querySelector(NOTION_MAIN_DIV) &&
-      !document.querySelector("#note_id")
-    ) {
-      appendDiv = true;
-    }
-    injectScript(appendDiv);
-  });
+// Handle notification row click event
+function showNotification(event) {
+  const targetClass = event.target.classList ?? [];
+  if (targetClass.contains("follow-btn") || targetClass.contains("archive")) {
+    return;
+  }
 
-  // Handle notion notification div click event
-  $("body").on(
-    "click",
-    '.notion-notifications-record div[role="button"]',
-    function (event) {
-      var href = $(event.target).parents("a").attr("href");
-      if (href && event.ctrlKey) {
-        window.open(href, "_blank");
-      } else {
-        // Find trigger element click event
-        $(NOTION_DIV_SCROLL)
-          .find('a[href="' + href + '"] div[role="button"]')
-          .not('.notion-notifications-record div[role="button"]')
-          .click();
-      }
-      return false;
+  let pageId = $(this).attr("data-id") ?? "";
+  let svgColor = $("body").hasClass("dark")
+    ? "rgba(255, 255, 255, 0.443)"
+    : "rgba(55, 53, 47, 0.45)";
+  if (pageId) {
+    let pageDataDiv = $('[data-page-type="' + pageId + '"]');
+    if (!pageDataDiv.is(":visible")) {
+      pageDataDiv.css("display", "block");
+      $(this).find(".custom-svg").html(`
+                  <svg
+                  viewBox="0 0 100 100"
+                  class="triangle"
+                  style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(180deg); opacity: 1;"
+              >
+                  <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
+              </svg>
+              `);
+    } else {
+      pageDataDiv.css("display", "none");
+      $(this).find(".custom-svg").html(`<svg
+                  viewBox="0 0 100 100"
+                  class="triangle"
+                  style="width: 0.6875em; height: 0.6875em; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; transition: transform 200ms ease-out 0s; transform: rotateZ(90deg); opacity: 1;"
+              >
+                  <polygon points="5.9,88.2 50,11.8 94.1,88.2 "></polygon>
+              </svg>
+              `);
     }
-  );
+  }
+}
 
-  // Handle notion notification archive click event
-  $("body").on("mouseenter", ".notion-notifications-record", function (event) {
-    if (event.target.querySelector(".closeSmall")) {
-      event.target.querySelector(".closeSmall").parentNode.style.opacity = 1;
-    }
-  });
-  // Mouseleave event
-  $("body").on("mouseleave", ".notion-notifications-record", function (event) {
-    if (event.target.querySelector(".closeSmall")) {
-      event.target.querySelector(".closeSmall").parentNode.style.opacity = 0;
-    }
-  });
-  // Archive event
-  $("body").on("click", ".closeSmall", function (event) {
-    let indexId = $(event.target).parents("div[data-index]").attr("data-index");
-    $(NOTION_DIV_SCROLL)
-      .find('div[data-index="' + indexId + '"] .closeSmall')
-      .parent()
-      .click();
-    let notificationId = $(event.target)
-      .parents("div[data-index]")
-      .parent()
-      .attr("data-page-type");
-    let notificationIdCount = parseInt(
-      $('[data-id="' + notificationId + '"]')
-        .find(".total-count")
-        .text()
-    );
+// Handle notion change tab event
+function notionFocusable() {
+  let appendDiv = false;
+  if (
+    document.querySelector(NOTION_MAIN_DIV) &&
+    !document.querySelector("#note_id")
+  ) {
+    appendDiv = true;
+  }
+  injectScript(appendDiv);
+}
+
+// Handle notion notification div click event
+function openLinkAndButtonTrigger(event) {
+  event.preventDefault();
+  var href = $(event.target).parents("a").attr("href");
+  // console.log(href)
+  if (href && event.ctrlKey) {
+    window.open(href, "_blank");
+    return
+  }
+  // Find trigger element click event
+  $(NOTION_DIV_SCROLL)
+    .find('a[href="' + href + '"] div[role="button"]')
+    .not('.notion-notifications-record div[role="button"]')
+    .click();
+
+  return false;
+}
+
+// MouseEnter event
+function notificationMouseEnter(event) {
+  if (event.target.querySelector(".closeSmall")) {
+    event.target.querySelector(".closeSmall").parentNode.style.opacity = 1;
+  }
+}
+
+// Mouseleave event
+function notificationMouseLeave(event) {
+  if (event.target.querySelector(".closeSmall")) {
+    event.target.querySelector(".closeSmall").parentNode.style.opacity = 0;
+  }
+}
+
+// Archive event
+function notificationArchive(event) {
+  let indexId = $(event.target).parents("div[data-index]").attr("data-index");
+  $(NOTION_DIV_SCROLL)
+    .find('div[data-index="' + indexId + '"] .closeSmall')
+    .parent()
+    .click();
+  let notificationId = $(event.target)
+    .parents("div[data-index]")
+    .parent()
+    .attr("data-page-type");
+  let notificationIdCount = parseInt(
     $('[data-id="' + notificationId + '"]')
       .find(".total-count")
-      .text(notificationIdCount - 1);
-    $('.notion-notifications-record[data-index="' + indexId + '"]').remove();
-    if (notificationIdCount - 1 == 0) {
-      $('[data-id="' + notificationId + '"]').remove();
-    }
-  });
-  // Archive all notification event
-  $("body").on("click", ".archive-all-notification", function (event) {
-    let indexId = $(event.target).parents("div[data-id]").attr("data-id");
-    $('div[data-page-type="' + indexId + '"]')
-      .find(".notion-notifications-record")
-      .each(function () {
-        $(this).find(".closeSmall").trigger("click");
-      });
+      .text()
+  );
+  $('[data-id="' + notificationId + '"]')
+    .find(".total-count")
+    .text(notificationIdCount - 1);
+  $('.notion-notifications-record[data-index="' + indexId + '"]').remove();
+  if (notificationIdCount - 1 == 0) {
+    $('[data-id="' + notificationId + '"]').remove();
+  }
+}
 
-    return false;
-  });
-  // Archive all notification event
-  $("body").on("click", ".follow-btn", function (event) {
-    let element = $(this);
-    let followUnFollowObject = JSON.parse(
-      decodeURIComponent(escape(window.atob(element.attr("data-scam"))))
-    );
-    let idFollow = element.attr("data-follow");
-    let spaceId = followUnFollowObject.space_id;
-    let navigableBlockId = followUnFollowObject.navigable_block_id;
-    let userId = followUnFollowObject.user_id;
-    let recordId = followUnFollowObject.id;
-    let following = idFollow == "true" ? false : true;
+// Archive all notification event
+function archiveAllNotification(event) {
+  let indexId = $(event.target).parents("div[data-id]").attr("data-id");
 
-    var settings = {
-      url: "https://www.notion.so/api/v3/saveTransactions",
-      method: "POST",
-      timeout: 0,
-      headers: {
-        accept: "*/*",
-        "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-        "content-type": "application/json",
-      },
-      data: JSON.stringify({
-        requestId: "000000-0000-000-000-00000",
-        transactions: [
-          {
-            id: "000000-0000-000-000-00000",
-            spaceId: spaceId,
-            debug: {
-              userAction: "UpdateSidebarFollowControl.setFollowing",
-            },
-            operations: [
-              {
-                pointer: {
-                  table: "follow",
-                  id: recordId,
-                  spaceId: spaceId,
-                },
-                path: [],
-                command: "set",
-                args: {
-                  id: recordId,
-                  user_id: userId,
-                  navigable_block_id: navigableBlockId,
-                  following: following,
-                  created_time: Date.now(),
-                  space_id: spaceId,
-                  version: 22,
-                },
-              },
-            ],
+  Array.from(
+    document.querySelectorAll(
+      'div[data-page-type="' +
+        indexId +
+        '"] .notion-notifications-record .closeSmall'
+    )
+  ).map(function (element) {
+    element.dispatchEvent(new Event("click"));
+  });
+
+  return false;
+}
+// Notification follow and unFollow event
+function notificationFollowUnFollow(event) {
+  let element = $(this);
+  let followUnFollowObject = JSON.parse(
+    decodeURIComponent(escape(window.atob(element.attr("data-scam"))))
+  );
+  let idFollow = element.attr("data-follow");
+  let spaceId = followUnFollowObject.space_id;
+  let navigableBlockId = followUnFollowObject.navigable_block_id;
+  let userId = followUnFollowObject.user_id;
+  let recordId = followUnFollowObject.id;
+  let following = idFollow == "true" ? false : true;
+
+  var settings = {
+    url: "https://www.notion.so/api/v3/saveTransactions",
+    method: "POST",
+    timeout: 0,
+    headers: {
+      accept: "*/*",
+      "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+      "content-type": "application/json",
+    },
+    data: JSON.stringify({
+      requestId: "000000-0000-000-000-00000",
+      transactions: [
+        {
+          id: "000000-0000-000-000-00000",
+          spaceId: spaceId,
+          debug: {
+            userAction: "UpdateSidebarFollowControl.setFollowing",
           },
-        ],
-      }),
-    };
-    $.ajax(settings).done(function (response) {
-      element.attr("data-follow", following);
-      element.html(following ? "U" : "F");
-    });
-    return false;
+          operations: [
+            {
+              pointer: {
+                table: "follow",
+                id: recordId,
+                spaceId: spaceId,
+              },
+              path: [],
+              command: "set",
+              args: {
+                id: recordId,
+                user_id: userId,
+                navigable_block_id: navigableBlockId,
+                following: following,
+                created_time: Date.now(),
+                space_id: spaceId,
+                version: 22,
+              },
+            },
+          ],
+        },
+      ],
+    }),
+  };
+  $.ajax(settings).done(function (response) {
+    element.attr("data-follow", following);
+    element.html(following ? "U" : "F");
   });
-});
+  return false;
+}
 
 /**
  * Handle MutationObserver
@@ -216,6 +226,52 @@ new MutationObserver(function (mutations) {
       return false;
     }
   }
+
+  // Hide show notification addEventListener
+  Array.from(document.querySelectorAll(".custom-tag-added")).map(function (
+    element
+  ) {
+    element.addEventListener("click", showNotification);
+  });
+
+  // Hide show notification icon addEventListener
+  Array.from(
+    document.querySelectorAll(".hide-scrollbar .notion-focusable")
+  ).map(function (element) {
+    element.addEventListener("click", notionFocusable);
+  });
+
+  // Notification content click addEventListener
+  Array.from(
+    document.querySelectorAll('.notion-notifications-record div[role="button"]')
+  ).map(function (element) {
+    element.addEventListener("click", openLinkAndButtonTrigger);
+  });
+
+  // Notification close click addEventListener
+  Array.from(document.querySelectorAll(".closeSmall")).map(function (element) {
+    element.addEventListener("click", notificationArchive);
+  });
+
+  // Notification archive click addEventListener
+  Array.from(
+    document.querySelectorAll(".archive-all-notification .archive")
+  ).map(function (element) {
+    element.addEventListener("click", archiveAllNotification);
+  });
+
+  // Notification follow & unFollow click addEventListener
+  Array.from(document.querySelectorAll(".follow-btn")).map(function (element) {
+    element.addEventListener("click", notificationFollowUnFollow);
+  });
+
+  // Notification hide show close icon addEventListener
+  Array.from(document.querySelectorAll(".notion-notifications-record")).map(
+    function (element) {
+      element.addEventListener("mouseenter", notificationMouseEnter);
+      element.addEventListener("mouseleave", notificationMouseLeave);
+    }
+  );
 }).observe(body, config);
 
 /**
@@ -363,7 +419,7 @@ async function injectScript(appendDiv = true) {
                     <span class="text-title">${item}</span>
                     ${
                       IS_INBOX_TAB > 1
-                        ? `<div class="archive-all-notification" title="Archive all notifications"> ${archiveSvg(
+                        ? `<div class="archive-all-notification"> ${archiveSvg(
                             svgColor
                           )} </div>`
                         : ""
@@ -621,7 +677,7 @@ function recordCount() {
  * @returns {String} for svg icon string
  */
 function archiveSvg(svgColor) {
-  return `<svg viewBox="0 0 16 16" class="archive" style="width: 14px; height: 100%; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; margin-left: 0px; margin-right: 6px;">
+  return `<svg viewBox="0 0 16 16" class="archive" style="width: 15px; height: 15px; display: block; fill: ${svgColor}; flex-shrink: 0; backface-visibility: hidden; margin-left: 0px; margin-right: 6px;">
     <path d="M4.083 14.585h7.499c1.347 0 2.064-.697 2.064-2.037V5.739c.664-.11 1.019-.608 1.019-1.34V3.36c0-.834-.458-1.36-1.299-1.36H2.3C1.499 2 1 2.526 1 3.36V4.4c0 .73.355 1.23 1.019 1.34v6.808c0 1.347.717 2.037 2.064 2.037zM2.579 4.728c-.342 0-.478-.144-.478-.486v-.724c0-.342.136-.486.478-.486h10.514c.342 0 .472.144.472.486v.724c0 .342-.13.486-.472.486H2.579zm1.49 8.825c-.615 0-.95-.335-.95-.95V5.76h9.427v6.842c0 .616-.342.95-.95.95H4.069zM5.58 8.515h4.512c.287 0 .492-.199.492-.5v-.218c0-.3-.205-.492-.492-.492H5.58c-.287 0-.485.191-.485.492v.219c0 .3.198.499.485.499z"></path></svg>`;
 }
 
@@ -653,8 +709,7 @@ function getFollowPageDetails(title) {
     );
     let isFollow = pageDetails.following;
     let followBtn = isFollow ? "U" : "F";
-    let followBtnTitle = isFollow ? "Unfollow notificatons of this document" : "Follow notificatons of this document";
-    followBtnHtml = `<div class="follow-btn" data-follow-page-id="${pageId}" data-follow='${isFollow}' data-scam="${encodePageDetail}" title="${followBtnTitle}" > ${followBtn} </div>`;
+    followBtnHtml = `<div class="follow-btn" data-follow-page-id="${pageId}" data-follow='${isFollow}' data-scam="${encodePageDetail}" > ${followBtn} </div>`;
   }
 
   return followBtnHtml;
@@ -774,7 +829,9 @@ async function loadActivityPages(event) {
   let allBlock = notionNotification.block ?? [];
   let spaces = notionNotification.space ?? [];
   let collection = notionNotification.collection ?? [];
-  let spacesPages = Object.values(spaces)[0].value.value ?? [];
+  let spacesPages = Object.values(spaces).length
+    ? Object.values(spaces)[0].value.value
+    : [];
   let firstPageId =
     spacesPages.pages != undefined && spacesPages.pages.length
       ? spacesPages.pages[0]
